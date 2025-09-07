@@ -574,55 +574,22 @@ grafana-server --config=grafana.ini --homepath=/usr/share/grafana
 - Consistent configuration across team members
 - Easy cleanup without leftover processes/files
 
-## Screenshots and Examples
+## Demonstration
+1. Create a UI blockingCalling the custom Freeze Guard action from the sandbox IDE.
 
-### 1. IDE Integration - Running Actions
+![alt text](docs/images/image.png)
 
-#### IntelliJ IDEA Plugin Actions
-![IntelliJ Freeze Guard Actions](docs/images/intellij-actions.png)
+![alt text](docs/images/image-7.png)
 
-The plugin integrates seamlessly into IntelliJ IDEA, providing three demonstration actions accessible through the IDE's action system.
+2. Python Fast API reporting page shows the various actions taken from the IDE including the number of stalls, longest stalls, and heap data used.
+![alt text](docs/images/image-8.png)
 
-#### VS Code Extension Commands  
-![VS Code Freeze Guard Commands](docs/images/vscode-commands.png)
+3. Can query Prometheus for the time series data.
+![alt text](docs/images/image-12.png)
 
-Similar functionality is available in VS Code through the Command Palette, demonstrating cross-platform consistency.
-
-### 2. Telemetry Collection
-
-#### FastAPI Collector Reports
-![FastAPI Collector Reports](docs/images/fastapi-reports.png)
-
-The Python FastAPI collector shows real-time event data including:
-- **Action execution times** and thread types
-- **UI stall detection results** (count and longest duration)  
-- **Memory usage deltas** showing heap allocation patterns
-- **Timestamp tracking** for performance analysis over time
-
-### 3. Prometheus Time-Series Data
-
-#### Raw Metrics Queries
-![Prometheus Time Series Queries](docs/images/prometheus-queries.png)
-
-Prometheus provides powerful time-series analysis capabilities, allowing you to:
-- Query specific metrics by action type and platform
-- Analyze performance trends over time
-- Create custom alerts based on performance thresholds
-- Export data for further analysis
-
-### 4. Grafana Dashboards
-
-#### Cross-Platform Performance Monitoring
-![Grafana Dashboard - IntelliJ Data](docs/images/grafana-intellij.png)
-
-![Grafana Dashboard - VS Code Data](docs/images/grafana-vscode.png)
-
-The unified Grafana dashboard displays:
-- **Real-time performance metrics** from both IDEs
-- **UI stall detection** with duration heatmaps
-- **Memory usage patterns** showing heap allocation trends
-- **Cross-platform comparison** enabling performance analysis between IntelliJ and VS Code
-- **Interactive filtering** by action type and thread
+4. Grafana Dashboard for both Intellij and VS code
+![alt text](docs/images/image-10.png)
+![alt text](docs/images/image-11.png)
 
 ## Development 
 
