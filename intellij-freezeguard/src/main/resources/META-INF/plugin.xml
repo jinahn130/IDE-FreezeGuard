@@ -1,0 +1,48 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<!-- plugin.xml is your plugin’s manifest. The IDE reads it at startup to discover and wire up everything your code contributes—IDs,
+ dependencies, entry points, actions, and extension registrations -->
+<idea-plugin>
+    <id>com.github.jinahn130.intellijfreezeguard</id>
+    <name>Intellij_FreezeGuard</name>
+    <vendor>jinahn130</vendor>
+
+    <!-- Platform-level dependency is fine (no Java PSI needed) -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <!-- Keep your resource bundle if you use it in messages -->
+    <resource-bundle>messages.MyBundle</resource-bundle>
+
+    <!-- existing extensions: tool window + post-startup activity) -->
+    <extensions defaultExtensionNs="com.intellij">
+
+        <!--registers Tool Window (class that builds the UI). -->
+        <toolWindow factoryClass="com.github.jinahn130.intellijfreezeguard.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
+        <!-- runs code after a project opens. (Modern API is ProjectActivity) -->
+        <postStartupActivity implementation="com.github.jinahn130.intellijfreezeguard.startup.MyProjectActivity"/>
+        <!-- existing extensions: tool window + post-startup activity) -->
+        <notificationGroup id="FreezeGuard" displayType="BALLOON" isLogByDefault="true"/>
+    </extensions>
+
+    <!-- three actions -->
+    <!-- <actions> … </actions>: declares user-facing actions so they show up in Find Action, menus, keymaps, etc.
+    Each <action … class="…"> points to an AnAction subclass.
+    Attributes like text, description, and an optional icon define the UI.
+    Optional sub-tags can add the action to menus/toolbars (<add-to-group …>) or define shortcuts.
+
+    Key point: Actions must be declared in plugin.xml (there’s no annotation-only path). Without this, AnAction classes won’t be discoverable.
+    -->
+    <actions>
+        <action id="com.github.jinahn130.intellijfreezeguard.Measure"
+                class="com.github.jinahn130.intellijfreezeguard.actions.FreezeGuardAction"
+                text="Freeze Guard: Measure Current Action"
+                description="Measure current action duration and EDT stalls"/>
+        <action id="com.github.jinahn130.intellijfreezeguard.Bad"
+                class="com.github.jinahn130.intellijfreezeguard.actions.BadBlockingAction"
+                text="Freeze Guard: Run BAD Blocking Action"
+                description="Deliberately blocks the UI thread to demonstrate stalls"/>
+        <action id="com.github.jinahn130.intellijfreezeguard.Good"
+                class="com.github.jinahn130.intellijfreezeguard.actions.BackgroundFixAction"
+                text="Freeze Guard: Run FIXED Background Action"
+                description="Runs the same work off the UI thread with progress/cancel"/>
+    </actions>
+</idea-plugin>

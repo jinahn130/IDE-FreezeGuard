@@ -5,3 +5,15 @@
 .kotlin
 .qodana
 build
+
+# Node.js dependencies
+node_modules/
+
+# VS Code extension compiled output
+vscode-freezeguard/extension/out/
+
+# Additional Gradle/IntelliJ artifacts
+.qodana/
+*.log
+*.tmp
+.kotlin-sessions/

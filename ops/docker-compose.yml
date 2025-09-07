@@ -1,0 +1,37 @@
+services:
+  collector:
+    build:
+      context: ../collector
+      dockerfile: Dockerfile
+    image: freeze-guard/collector:local
+    container_name: fg-collector
+    ports:
+      - "8000:8000"
+    networks: [fgnet]
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: fg-prometheus
+    volumes:
+      - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks: [fgnet]
+    depends_on: [collector]
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: fg-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ../grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    networks: [fgnet]
+    depends_on: [prometheus]
+
+networks:
+  fgnet: {}

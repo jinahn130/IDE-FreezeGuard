@@ -1,0 +1,318 @@
+{
+  "id": null,
+  "uid": "freeze-guard",
+  "title": "FreezeGuard - Cross-Platform Performance Monitor",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "5s",
+  "time": { "from": "now-30m", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "action",
+        "type": "query",
+        "datasource": "Prometheus",
+        "refresh": 1,
+        "query": "label_values(events_total, action)",
+        "includeAll": true,
+        "multi": true,
+        "current": { "selected": true, "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "thread",
+        "type": "query",
+        "datasource": "Prometheus",
+        "refresh": 1,
+        "query": "label_values(events_total, thread)",
+        "includeAll": true,
+        "multi": true,
+        "current": { "selected": true, "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Total Events/sec",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 50 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(events_total{action=~\"$action\",thread=~\"$thread\"}[1m]))",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "UI Thread Stalls/sec",
+      "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(edt_stalls_total{action=~\"$action\"}[1m]))",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Active Platforms",
+      "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "targets": [
+        {
+          "expr": "count(count by (thread) (rate(events_total[5m]) > 0))",
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "title": "Memory Usage by Action (MB)",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "orientation": "horizontal",
+            "displayMode": "basic"
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le,action,thread) (rate(heap_delta_bytes_bucket{action=~\"$action\",thread=~\"$thread\"}[5m])))",
+          "legendFormat": "{{action}} ({{thread}})"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Action Duration Percentiles (P50/P95/P99)",
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": ["min", "max", "mean"]
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le,action,thread) (rate(action_duration_seconds_bucket{action=~\"$action\",thread=~\"$thread\"}[$__rate_interval])))",
+          "legendFormat": "P50 {{action}} ({{thread}})"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le,action,thread) (rate(action_duration_seconds_bucket{action=~\"$action\",thread=~\"$thread\"}[$__rate_interval])))",
+          "legendFormat": "P95 {{action}} ({{thread}})"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le,action,thread) (rate(action_duration_seconds_bucket{action=~\"$action\",thread=~\"$thread\"}[$__rate_interval])))",
+          "legendFormat": "P99 {{action}} ({{thread}})"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "UI Thread Stall Rate (stalls/second)",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 20
+          },
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (action) (rate(edt_stalls_total{action=~\"$action\"}[1m]))",
+          "legendFormat": "{{action}} stalls/s"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Longest UI Thread Stall Duration",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 20
+          },
+          "color": { "mode": "palette-classic" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "red", "value": 1.0 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le,action) (rate(edt_stall_duration_seconds_bucket{action=~\"$action\"}[$__rate_interval])))",
+          "legendFormat": "P95 {{action}} stall duration"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le,action) (rate(edt_stall_duration_seconds_bucket{action=~\"$action\"}[$__rate_interval])))",
+          "legendFormat": "P99 {{action}} stall duration"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Thread Distribution (Events/sec by Platform)",
+      "gridPos": { "x": 0, "y": 18, "w": 12, "h": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 30,
+            "stacking": { "mode": "normal" }
+          },
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (thread) (rate(events_total{action=~\"$action\",thread=~\"$thread\"}[1m]))",
+          "legendFormat": "{{thread}} (IntelliJ=EDT, VSCode=Main)"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Action Performance Summary",
+      "gridPos": { "x": 12, "y": 18, "w": 12, "h": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "displayMode": "auto",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "P95 Duration" },
+            "properties": [{ "id": "unit", "value": "s" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Stall Rate" },
+            "properties": [{ "id": "unit", "value": "ops" }]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le,action,thread) (rate(action_duration_seconds_bucket{action=~\"$action\",thread=~\"$thread\"}[5m])))",
+          "legendFormat": "",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Value": "P95 Duration",
+              "action": "Action",
+              "thread": "Platform"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "heatmap",
+      "title": "UI Thread Stall Duration Distribution",
+      "gridPos": { "x": 0, "y": 24, "w": 24, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": { "legend": false, "tooltip": false, "vis": false }
+          }
+        }
+      },
+      "options": {
+        "calculate": true,
+        "yAxis": {
+          "unit": "s",
+          "scale": {
+            "type": "linear"
+          }
+        },
+        "color": {
+          "mode": "scheme",
+          "scheme": "Spectral",
+          "steps": 64
+        },
+        "cellGap": 2,
+        "cellRadius": 0
+      },
+      "targets": [
+        {
+          "expr": "increase(edt_stall_duration_seconds_bucket{action=~\"$action\"}[1m])",
+          "legendFormat": "{{le}}",
+          "format": "heatmap"
+        }
+      ]
+    }
+  ]
+}
