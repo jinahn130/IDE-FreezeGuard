@@ -66,3 +66,23 @@ def report():
             f"longest={ev.edt_longest_stall_ms:5.1f} ms  heapΔ={ev.heap_delta_bytes}"
         )
     return "\n".join(lines) if lines else "(no events yet)"
+
+@app.get("/debug")
+def debug():
+    events_list = []
+    for ts, ev in list(RING):
+        events_list.append({
+            "timestamp": ts.isoformat(),
+            "action": ev.action,
+            "duration_ms": ev.duration_ms,
+            "thread": ev.thread,
+            "heap_delta_bytes": ev.heap_delta_bytes,
+            "edt_stalls": ev.edt_stalls,
+            "edt_longest_stall_ms": ev.edt_longest_stall_ms
+        })
+    
+    return {
+        "total_events": len(RING),
+        "recent_events": events_list[-50:],  # Last 50 events
+        "ring_buffer_size": RING.maxlen
+    }

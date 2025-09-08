@@ -1,0 +1,1 @@
+# Test package for Freeze Guard Collector

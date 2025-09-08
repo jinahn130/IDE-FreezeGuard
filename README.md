@@ -551,3 +551,206 @@ cd intellij-freezeguard
 ./gradlew buildPlugin
 ./gradlew verifyPlugin
 ```
+
+## Testing
+
+### Automated Testing Suite
+
+The project includes comprehensive tests for the communication layer between IDEs and the monitoring stack:
+
+**Quick Test All Components:**
+```bash
+./run-all-tests.sh
+```
+
+**Individual Component Tests:**
+
+```bash
+# IntelliJ Plugin Tests
+cd intellij-freezeguard
+./gradlew test
+
+# VS Code Extension Tests  
+cd vscode-freezeguard/extension
+npm install && npm run compile && npm test
+
+# Collector API Tests
+cd collector
+python3 -m pip install -r requirements.txt
+python3 -m pytest tests/ -v
+```
+
+### Integration Testing
+
+**End-to-End Mock Data Pipeline:**
+```bash
+# Start monitoring stack
+docker compose up -d
+
+# Inject mock performance issues and verify they appear in metrics
+python3 test-integration.py
+
+# View results in Grafana at http://localhost:3000
+# Look for actions 'FreezeGuard.BadBlockingAction', 'freezeguard.badBlocking', etc. in the dashboards
+```
+
+**Mock Data Features:**
+- **IntelliJ Mock Events**: Uses real action names (`FreezeGuard.BadBlockingAction`, `FreezeGuard.MeasureAction`) with simulated poor performance data (1.5s-2.2s delays, 3-9 EDT stalls)
+- **VS Code Mock Events**: Uses real action names (`freezeguard.badBlocking`, `freezeguard.backgroundFix`, `freezeguard.measure`) with simulated performance issues (0.75s-1.2s delays, 2-4 main thread stalls)
+- **Cross-Platform Labels**: Events tagged with appropriate thread types (EDT/MAIN/WORKER)
+- **Realistic Testing**: Mock events use actual action names from the project for authentic telemetry pipeline validation
+- **Note**: These are **simulated JSON events** sent directly to the collector via HTTP - they do NOT trigger actual UI actions or IDE freezes
+
+## Testing Architecture
+
+### Philosophy and Scope
+
+The IDE-FreezeGuard testing strategy focuses on **validating the critical communication pipeline** between IDEs and the monitoring infrastructure. Rather than exhaustive unit testing, we prioritize testing the telemetry flow that enables performance monitoring across different development environments.
+
+### Architecture Overview
+
+```
+Unit Tests        API Tests         Integration Tests      Manual Testing
+┌─────────────┐   ┌─────────────┐   ┌─────────────────┐   ┌─────────────┐
+│IntelliJ     │   │Collector    │   │End-to-End       │   │Real IDE     │
+│Mock Events  │   │HTTP         │   │Mock Pipeline    │   │Usage        │
+│VS Code      │   │Validation   │   │Docker Stack     │   │Grafana      │
+│Stall Logic  │   │Prometheus   │   │HTTP → Metrics   │   │Dashboards   │
+└─────────────┘   └─────────────┘   └─────────────────┘   └─────────────┘
+```
+
+### Stall Detection Technical Details
+
+**IntelliJ EDT (Event Dispatch Thread) Monitoring:**
+- **Mechanism**: Posts heartbeat probes every 50ms to the EDT using `SwingUtilities.invokeLater()`
+- **Precision**: Uses `System.nanoTime()` for microsecond-level timing accuracy
+- **Detection**: Measures delay between scheduling and execution; ≥100ms delay = stall
+- **During 1200ms freeze**: Multiple probes accumulate delays, longest approaches freeze duration
+
+```kotlin
+val expectedNs = System.nanoTime()
+SwingUtilities.invokeLater {
+    val actualNs = System.nanoTime()
+    val delayMs = (actualNs - expectedNs) / 1_000_000.0
+    if (delayMs >= stallThresholdMs) {
+        stallCount.incrementAndGet()
+        longestStallMs.updateAndGet { prev -> max(prev, rounded) }
+    }
+}
+```
+
+**VS Code Main Thread Monitoring:**
+- **Mechanism**: Uses `setInterval()` to measure timing consistency between expected vs actual intervals
+- **Detection**: Compares actual interval against expected 50ms period
+- **Calculation**: `delayMs = actualInterval - expectedInterval`
+- **Thread Types**: Monitors both MAIN thread and WORKER thread performance
+
+```typescript
+const now = Date.now();
+const actualInterval = now - this.lastProbeTime;
+const delayMs = actualInterval - expectedInterval;
+if (delayMs >= this.stallThresholdMs) {
+    this.stallCount++;
+    this.longestStallMs = Math.max(this.longestStallMs, delayMs);
+}
+```
+
+### Test Categories
+
+#### 1. **Unit Tests (Communication Layer)**
+**Location**: `intellij-freezeguard/src/test/`, `vscode-freezeguard/extension/src/test/`
+
+Validates telemetry data structures, mock event generation, cross-platform thread type compatibility, and stall detection algorithms without actual delays.
+
+#### 2. **API Tests (Collector Validation)** 
+**Location**: `collector/tests/`
+
+Tests HTTP endpoints, cross-platform event ingestion, Prometheus metrics generation, and error handling for malformed requests.
+
+#### 3. **Integration Tests (End-to-End Pipeline)**
+**Location**: `test-integration.py` (root directory)
+
+Validates the complete telemetry flow by injecting simulated events via HTTP and verifying they appear in Prometheus metrics and Grafana dashboards.
+
+### Mock Data Strategy
+
+Mock events use real action names from the project (`FreezeGuard.BadBlockingAction`, `freezeguard.badBlocking`, etc.) with simulated poor performance data (200ms-2s delays, realistic stall counts) to validate the telemetry pipeline without triggering actual UI freezes.
+
+### Running Tests
+
+#### **Quick Test All Components:**
+```bash
+./run-all-tests.sh
+```
+
+#### **Individual Component Testing:**
+
+**IntelliJ Plugin:**
+```bash
+cd intellij-freezeguard && ./gradlew test
+```
+
+**VS Code Extension:**
+```bash
+cd vscode-freezeguard/extension && npm install && npm run compile && npm test
+```
+
+**Collector API:**
+```bash
+cd collector && python3 -m pip install -r requirements.txt && python3 -m pytest tests/ -v
+```
+
+#### **End-to-End Integration Testing:**
+
+**Prerequisites:**
+```bash
+python3 -m pip install -r requirements.txt  # Install integration test dependencies
+```
+
+**Execute Integration Test:**
+```bash
+# Start monitoring stack
+cd ops && docker compose up -d && cd ..
+
+# Run integration pipeline test
+python3 test-integration.py
+```
+
+**What the Integration Test Does:**
+
+Validates the complete telemetry pipeline by:
+1. Checking collector connectivity
+2. Injecting mock events with real action names via HTTP POST
+3. Verifying events appear in Prometheus metrics with proper cross-platform thread labels
+4. Confirming the full flow: `Mock Events → Collector → Prometheus → Grafana`
+
+**View Results:**
+- Open Grafana: http://localhost:3000
+- Look for actions 'FreezeGuard.BadBlockingAction', 'freezeguard.badBlocking', etc. in performance dashboards
+- Observe heatmaps showing injected stall patterns
+
+### Troubleshooting
+
+**Common Issues:**
+
+1. **Integration test fails with "ModuleNotFoundError: requests"**
+   - Solution: `python3 -m pip install -r requirements.txt`
+
+2. **Integration test fails with "Connection refused"**
+   - Solution: Start monitoring stack: `cd ops && docker compose up -d`
+
+3. **VS Code tests fail with compilation errors**
+   - Solution: `npm run compile` before `npm test`
+
+4. **Mock events don't appear in Grafana**
+   - Check collector logs: `docker logs fg-collector`
+   - Verify Prometheus targets: http://localhost:9090/targets
+   - Wait 15-30 seconds for metrics scraping interval
+
+**Test Data Cleanup:**
+```bash
+# Stop and reset monitoring stack
+cd ops && docker compose down && docker compose up -d
+```
+
+This testing architecture ensures the critical telemetry communication pipeline works reliably across both IntelliJ and VS Code environments, providing confidence in the performance monitoring system's core functionality.
