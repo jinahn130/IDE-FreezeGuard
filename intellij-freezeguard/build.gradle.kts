@@ -4,6 +4,9 @@ plugins {
 
     // IntelliJ Platform Gradle Plugin 2.x
     id("org.jetbrains.intellij.platform") version "2.8.0"
+    
+    // Gradle Changelog Plugin
+    id("org.jetbrains.changelog") version "2.2.1"
 }
 
 kotlin {
@@ -50,6 +53,22 @@ intellijPlatform {
             recommended()
         }
     }
+}
+
+// Configure changelog plugin
+changelog {
+    version.set("1.0.0")
+    path.set("${project.projectDir}/CHANGELOG.md")
+    header.set(provider { "[${version.get()}] - ${date()}" })
+    headerParserRegex.set("""(\d+\.\d+\.\d+)""".toRegex())
+    introduction.set("""
+        IDE FreezeGuard is a cross-platform performance monitoring solution for IntelliJ IDEA and Visual Studio Code.
+        It tracks UI freezes, measures performance metrics, and provides telemetry for monitoring system health.
+    """.trimIndent())
+    itemPrefix.set("-")
+    keepUnreleasedSection.set(true)
+    unreleasedTerm.set("[Unreleased]")
+    groups.set(listOf("Added", "Changed", "Fixed", "Removed"))
 }
 
 tasks.test {
