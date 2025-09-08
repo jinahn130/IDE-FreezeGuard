@@ -213,7 +213,7 @@ jobs:
   releaseDraft:
     name: Release draft
     if: github.event_name != 'pull_request'
-    needs: [ build, test, inspectCode, verify ]
+    needs: [ build, test, inspectCode, verify, test-vscode, test-collector ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -222,6 +222,33 @@ jobs:
       # Check out the current repository
       - name: Fetch Sources
         uses: actions/checkout@v4
+
+      # Set up the Java environment for Gradle operations
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 21
+
+      # Setup Gradle
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      # Download IntelliJ plugin artifact from build job
+      - name: Download IntelliJ Plugin Artifact
+        uses: actions/download-artifact@v4
+        with:
+          pattern: 'intellij-freezeguard-*'
+          path: ./artifacts/intellij/
+
+      # Download VS Code extension artifact from test-vscode job
+      - name: Download VS Code Extension Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: vscode-freezeguard-extension
+          path: ./artifacts/vscode/
 
       # Remove old release drafts by using the curl request for the available releases with a draft flag
       - name: Remove Old Release Drafts
@@ -232,7 +259,7 @@ jobs:
             --jq '.[] | select(.draft == true) | .id' \
             | xargs -I '{}' gh api -X DELETE repos/{owner}/{repo}/releases/{}
 
-      # Create a new release draft which is not publicly visible and requires manual acceptance
+      # Create a comprehensive release draft with both IntelliJ and VS Code extensions
       - name: Create Release Draft
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -242,10 +269,37 @@ jobs:
           RELEASE_NOTE="./build/tmp/release_note.txt"
           ./gradlew getChangelog --unreleased --no-header --quiet --console=plain --output-file=$RELEASE_NOTE
           
+          # Create enhanced release notes that cover both extensions
+          echo "" >> $RELEASE_NOTE
+          echo "## Package Contents" >> $RELEASE_NOTE
+          echo "" >> $RELEASE_NOTE
+          echo "This release includes:" >> $RELEASE_NOTE
+          echo "- **IntelliJ IDEA Plugin**: Cross-platform performance monitoring for IntelliJ-based IDEs" >> $RELEASE_NOTE
+          echo "- **VS Code Extension**: Performance monitoring extension for Visual Studio Code" >> $RELEASE_NOTE
+          echo "- **Collector Service**: Centralized telemetry collection service (Docker deployable)" >> $RELEASE_NOTE
+          echo "" >> $RELEASE_NOTE
+          echo "## Installation" >> $RELEASE_NOTE
+          echo "" >> $RELEASE_NOTE
+          echo "### IntelliJ Plugin" >> $RELEASE_NOTE
+          echo "1. Download the IntelliJ plugin ZIP file" >> $RELEASE_NOTE
+          echo "2. In IntelliJ: Settings → Plugins → Install Plugin from Disk" >> $RELEASE_NOTE
+          echo "3. Select the downloaded ZIP file and restart IntelliJ" >> $RELEASE_NOTE
+          echo "" >> $RELEASE_NOTE
+          echo "### VS Code Extension" >> $RELEASE_NOTE
+          echo "1. Download the VSIX file" >> $RELEASE_NOTE
+          echo "2. In VS Code: Extensions → Install from VSIX" >> $RELEASE_NOTE
+          echo "3. Select the downloaded VSIX file and reload VS Code" >> $RELEASE_NOTE
+          echo "" >> $RELEASE_NOTE
+          echo "### Collector Service" >> $RELEASE_NOTE
+          echo "Run \`docker-compose up\` in the collector directory to start the monitoring infrastructure." >> $RELEASE_NOTE
+          
+          # Create the release with both artifacts
           gh release create $VERSION \
             --draft \
-            --title $VERSION \
-            --notes-file $RELEASE_NOTE
+            --title "IDE FreezeGuard $VERSION - Cross-Platform Performance Monitoring" \
+            --notes-file $RELEASE_NOTE \
+            ../artifacts/intellij/**/*.zip \
+            ../artifacts/vscode/*.vsix
 
   # Test VS Code extension
   test-vscode:

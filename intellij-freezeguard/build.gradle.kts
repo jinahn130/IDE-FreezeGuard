@@ -22,6 +22,9 @@ dependencies {
         intellijIdeaCommunity("2024.2.5")
         // Java plugin is bundled in many IDEs; include it so actions work everywhere.
         bundledPlugin("com.intellij.java")
+        
+        // Plugin Verifier dependencies
+        pluginVerifier()
     }
     
     // Testing dependencies
@@ -30,6 +33,23 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.0")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+}
+
+// Configure IntelliJ Platform plugin
+intellijPlatform {
+    pluginConfiguration {
+        version = "1.0.0"
+        name = "Freeze Guard"
+        description = "Monitor and track IntelliJ IDEA UI freezes and performance"
+    }
+    
+    // Configure plugin verification
+    pluginVerification {
+        ides {
+            // Verify against the same IDE version we're targeting
+            recommended()
+        }
+    }
 }
 
 tasks.test {
