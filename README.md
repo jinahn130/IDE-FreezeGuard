@@ -556,6 +556,11 @@ used to validate real user experience and IntelliJ Platform integration beyond u
 # Trigger via GitHub Actions (manual)
 workflow_dispatch: Run UI Tests
 
-# Local execution
-./gradlew runIdeForUiTests && ./gradlew test
+# Local testing (run IDE with plugin for manual testing)
+cd intellij-freezeguard
+./gradlew runIde
+
+# Build and verify plugin
+./gradlew buildPlugin
+./gradlew verifyPlugin
 ```
