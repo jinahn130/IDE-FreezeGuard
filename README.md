@@ -538,25 +538,12 @@ prometheus --config.file=prometheus/prometheus.yml --web.listen-address=:9090
 grafana-server --config=grafana.ini --homepath=/usr/share/grafana
 ```
 
-## Testing
+## Development
 
-### Automated UI Testing (IntelliJ Plugin)
-
-Run testing script for Intellij to ensure that plugin installation, action menu integration, demo execution, telemetry validation, error handling are intact after making changes.  The script uses **IntelliJ UI Test Robot**, a robot-server plugin (port 8082) that accepts UI automation commands - like Selenium WebDriver for desktop IDEs.
-
-**Cross-Platform Execution**:
-- **Linux**: Headless via Xvfb virtual display  
-- **Windows/macOS**: Background IDE execution
-- **Health Check**: Waits up to 7.5 minutes for IDE to fully load
-
-
-used to validate real user experience and IntelliJ Platform integration beyond unit tests.
+### Local Development (IntelliJ Plugin)
 
 ```bash
-# Trigger via GitHub Actions (manual)
-workflow_dispatch: Run UI Tests
-
-# Local testing (run IDE with plugin for manual testing)
+# Run IDE with plugin for development and manual testing
 cd intellij-freezeguard
 ./gradlew runIde
 
