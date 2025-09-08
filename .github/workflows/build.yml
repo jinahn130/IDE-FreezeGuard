@@ -261,11 +261,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       # Install dependencies
       - name: Install VS Code Extension Dependencies
-        run: cd vscode-freezeguard/extension && npm install
+        run: |
+          cd vscode-freezeguard/extension
+          npm cache clean --force
+          npm install
 
       # Compile TypeScript
       - name: Compile VS Code Extension
@@ -279,8 +282,7 @@ jobs:
       - name: Build VSIX Package
         run: |
           cd vscode-freezeguard/extension
-          npm install -g @vscode/vsce
-          vsce package --out ../../vscode-freezeguard.vsix
+          npx @vscode/vsce@latest package --out ../../vscode-freezeguard.vsix
 
       # Upload VS Code extension artifact
       - name: Upload VS Code Extension Artifact
