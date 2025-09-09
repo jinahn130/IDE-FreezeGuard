@@ -17,3 +17,5 @@ vscode-freezeguard/extension/out/
 *.log
 *.tmp
 .kotlin-sessions/
+
+CLAUDE_CONTEXT.md
