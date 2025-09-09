@@ -242,7 +242,8 @@ jobs:
           
           # Generate changelog-based release notes
           RELEASE_NOTE="./build/tmp/release_note.txt"
-          ./gradlew getChangelog --unreleased --no-header --quiet --console=plain --output-file=$RELEASE_NOTE
+          mkdir -p ./build/tmp
+          ./gradlew getChangelog --unreleased --no-header --quiet --console=plain > $RELEASE_NOTE
           
           # Append installation and usage instructions to changelog content
           cat >> $RELEASE_NOTE << 'INSTALLATION_EOF'
