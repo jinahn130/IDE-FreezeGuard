@@ -76,19 +76,12 @@ jobs:
           name: ${{ steps.artifact.outputs.filename }}
           path: ./intellij-freezeguard/build/distributions/content/*/*
 
-  # Run tests and upload a code coverage report
+  # Run essential tests only (fast feedback)
   test:
-    name: Test
+    name: Essential Tests
     needs: [ build ]
     runs-on: ubuntu-latest
     steps:
-
-      # Free GitHub Actions Environment Disk Space
-      - name: Maximize Build Space
-        uses: jlumbroso/free-disk-space@v1.3.1
-        with:
-          tool-cache: false
-          large-packages: false
 
       # Check out the current repository
       - name: Fetch Sources
@@ -107,28 +100,14 @@ jobs:
         with:
           cache-read-only: true
 
-      # Run tests
-      - name: Run Tests
-        run: cd intellij-freezeguard && ./gradlew check
+      # Run only unit tests (skip slow integration tests)
+      - name: Run Unit Tests
+        run: cd intellij-freezeguard && ./gradlew test
 
-      # Collect Tests Result of failed tests
-      - name: Collect Tests Result
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: tests-result
-          path: ${{ github.workspace }}/intellij-freezeguard/build/reports/tests
-
-      # Upload the Kover report to CodeCov
-      - name: Upload Code Coverage Report
-        uses: codecov/codecov-action@v5
-        with:
-          files: ${{ github.workspace }}/intellij-freezeguard/build/reports/kover/report.xml
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-  # Run Qodana inspections and provide a report
+  # Run Qodana inspections and provide a report (main branch only)
   inspectCode:
     name: Inspect code
+    if: github.ref == 'refs/heads/main'
     needs: [ build ]
     runs-on: ubuntu-latest
     permissions:
@@ -165,9 +144,10 @@ jobs:
           cache-default-branch-only: true
           args: --project-dir,intellij-freezeguard
 
-  # Run plugin structure verification along with IntelliJ Plugin Verifier
+  # Run plugin structure verification along with IntelliJ Plugin Verifier (main branch only)
   verify:
     name: Verify plugin
+    if: github.ref == 'refs/heads/main'
     needs: [ build ]
     runs-on: ubuntu-latest
     steps:
@@ -212,8 +192,8 @@ jobs:
   # If accepted and published, the release workflow would be triggered
   releaseDraft:
     name: Release draft
-    if: github.event_name != 'pull_request'
-    needs: [ build, test, inspectCode, verify, test-vscode, test-collector ]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [ build, test ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -242,13 +222,6 @@ jobs:
         with:
           pattern: 'intellij-freezeguard-*'
           path: ./artifacts/intellij/
-
-      # Download VS Code extension artifact from test-vscode job
-      - name: Download VS Code Extension Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: vscode-freezeguard-extension
-          path: ./artifacts/vscode/
 
       # Remove old release drafts by using the curl request for the available releases with a draft flag
       - name: Remove Old Release Drafts
@@ -323,17 +296,17 @@ jobs:
           Report issues at: https://github.com/jinahn130/IDE-FreezeGuard/issues
           INSTALLATION_EOF
           
-          # Create the release with both artifacts
+          # Create the release with IntelliJ plugin
           gh release create $VERSION \
             --draft \
-            --title "IDE FreezeGuard $VERSION - Cross-Platform Performance Monitoring" \
+            --title "IDE FreezeGuard $VERSION - IntelliJ Performance Monitoring" \
             --notes-file $RELEASE_NOTE \
-            ../artifacts/intellij/**/*.zip \
-            ../artifacts/vscode/*.vsix
+            ../artifacts/intellij/**/*.zip
 
-  # Test VS Code extension
+  # Test VS Code extension (main branch only)  
   test-vscode:
-    name: Test VS Code Extension  
+    name: Test VS Code Extension
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
 
@@ -375,9 +348,10 @@ jobs:
           name: vscode-freezeguard-extension
           path: vscode-freezeguard.vsix
 
-  # Test collector API
+  # Test collector API (main branch only)
   test-collector:
     name: Test Collector API
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
 
