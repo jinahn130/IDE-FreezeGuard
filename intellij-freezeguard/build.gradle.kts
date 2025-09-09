@@ -59,7 +59,7 @@ intellijPlatform {
 changelog {
     version.set("1.0.0")
     path.set("${project.projectDir}/CHANGELOG.md")
-    header.set(provider { "[${version.get()}] - ${java.time.LocalDate.now()}" })
+    header.set(provider { "[${version.get()}]" })
     headerParserRegex.set("""(\d+\.\d+\.\d+)""".toRegex())
     introduction.set("""
         IDE FreezeGuard is a cross-platform performance monitoring solution for IntelliJ IDEA and Visual Studio Code.
