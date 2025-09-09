@@ -222,6 +222,14 @@ jobs:
         with:
           pattern: 'intellij-freezeguard-*'
           path: ./artifacts/intellij/
+          
+      # Debug: List downloaded artifacts
+      - name: List Downloaded Artifacts
+        run: |
+          echo "Contents of artifacts directory:"
+          find ./artifacts -type f -ls || echo "No artifacts directory found"
+          echo "Contents of intellij-freezeguard build directory:"
+          find ./intellij-freezeguard/build -name "*.zip" -ls || echo "No ZIP files in build directory"
 
       # Remove old release drafts by using the curl request for the available releases with a draft flag
       - name: Remove Old Release Drafts
@@ -297,12 +305,21 @@ jobs:
           Report issues at: https://github.com/jinahn130/IDE-FreezeGuard/issues
           INSTALLATION_EOF
           
-          # Create the release with IntelliJ plugin
-          gh release create $VERSION \
-            --draft \
-            --title "IDE FreezeGuard $VERSION - IntelliJ Performance Monitoring" \
-            --notes-file $RELEASE_NOTE \
-            ../artifacts/intellij/**/*.zip
+          # Create the release with IntelliJ plugin (check if artifacts exist first)
+          if find ../artifacts/intellij -name "*.zip" -type f | head -1 > /dev/null 2>&1; then
+            PLUGIN_ZIP=$(find ../artifacts/intellij -name "*.zip" -type f | head -1)
+            gh release create $VERSION \
+              --draft \
+              --title "IDE FreezeGuard $VERSION - IntelliJ Performance Monitoring" \
+              --notes-file $RELEASE_NOTE \
+              "$PLUGIN_ZIP"
+          else
+            echo "No plugin ZIP found, creating release without artifacts"
+            gh release create $VERSION \
+              --draft \
+              --title "IDE FreezeGuard $VERSION - IntelliJ Performance Monitoring" \
+              --notes-file $RELEASE_NOTE
+          fi
 
   # Test VS Code extension (main branch only)  
   test-vscode:
